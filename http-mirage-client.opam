@@ -1,0 +1,36 @@
+opam-version: "2.0"
+synopsis: "HTTP client for MirageOS"
+maintainer: ["team@robur.coop"]
+authors: [
+  "Robur Team <team@robur.coop>"
+]
+license: "MIT"
+homepage: "https://github.com/roburio/http-mirage-client"
+bug-reports: "https://github.com/roburio/http-mirage-client/issues"
+depends: [
+  "dune" {>= "2.3"}
+  "ocaml" {>= "4.11.0"}
+  "paf" {>= "0.2.0"}
+  "mirage-clock" {>= "4.0.0"}
+  "mirage-time" {>= "3.0.0"}
+  "tcpip" {>= "7.0.0"}
+  "lwt" {>= "5.5.0"}
+  "mimic-happy-eyeballs"
+  "httpaf"
+  "h2"
+]
+build: [
+  ["dune" "subst"] {dev}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "@install"
+    "@runtest" {with-test}
+    "@doc" {with-doc}
+  ]
+]
+dev-repo: "git+https://github.com/roburio/memtrace-mirage.git"

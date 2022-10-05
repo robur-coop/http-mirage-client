@@ -1,0 +1,4 @@
+(library
+ (name http_mirage_client)
+ (public_name http-mirage-client)
+ (libraries paf mirage-clock x509 tcpip mimic-happy-eyeballs httpaf h2))
