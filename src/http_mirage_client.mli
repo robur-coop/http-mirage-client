@@ -1,7 +1,9 @@
+type t
+
 module type S = sig
-  val connect : Mimic.ctx -> Mimic.ctx Lwt.t
-  val alpn_protocol : Mimic.flow -> string option
-  val authenticator : (X509.Authenticator.t, [> `Msg of string ]) result
+  type nonrec t = t
+
+  val connect : Mimic.ctx -> t Lwt.t
 end
 
 module Make
@@ -22,9 +24,7 @@ type response =
 val one_request :
   ?config:[ `H2 of H2.Config.t | `HTTP_1_1 of Httpaf.Config.t ] ->
   ?tls_config:Tls.Config.client ->
-  ctx:Mimic.ctx ->
-  alpn_protocol:(Mimic.flow -> string option) ->
-  authenticator:(X509.Authenticator.t, [> `Msg of string ]) result ->
+  t ->
   ?meth:Httpaf.Method.t ->
   ?headers:(string * string) list ->
   ?body:string ->
