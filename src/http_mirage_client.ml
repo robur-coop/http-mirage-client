@@ -291,7 +291,7 @@ let single_request ~ctx ~alpn_protocol ?config cfg ~meth ~headers ?body uri =
   Mimic.close flow >|= fun () ->
   r
 
-let tls_config ?tls_config ?config authenticator =
+let tls_config ?tls_config ?config authenticator user's_authenticator =
   lazy ( match tls_config with
   | Some cfg -> Ok (`Custom cfg)
   | None ->
@@ -299,7 +299,10 @@ let tls_config ?tls_config ?config authenticator =
       | None -> [ "h2"; "http/1.1" ]
       | Some (`H2 _) -> [ "h2" ]
       | Some (`HTTP_1_1 _) -> [ "http/1.1" ] in
-    Result.map (fun authenticator -> `Default (Tls.Config.client ~alpn_protocols ~authenticator ())) authenticator )
+    match authenticator, user's_authenticator with
+    | Ok authenticator, None -> Ok (`Default (Tls.Config.client ~alpn_protocols ~authenticator ()))
+    | _, Some authenticator -> Ok (`Default (Tls.Config.client ~alpn_protocols ~authenticator ()))
+    | (Error _ as err), None -> err )
 
 let resolve_location ~uri ~location =
   match String.split_on_char '/' location with
@@ -319,12 +322,13 @@ let one_request
   ?config
   ?tls_config:cfg
   { ctx; alpn_protocol; authenticator; }
+  ?authenticator:user's_authenticator
   ?(meth= `GET)
   ?(headers= [])
   ?body
   ?(max_redirect= 5)
   ?(follow_redirect= true) uri =
-  let tls_config = tls_config ?tls_config:cfg ?config authenticator in
+  let tls_config = tls_config ?tls_config:cfg ?config authenticator user's_authenticator in
   if not follow_redirect
   then single_request ~ctx ~alpn_protocol ?config tls_config ~meth ~headers ?body uri
   else

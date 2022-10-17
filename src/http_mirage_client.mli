@@ -25,6 +25,7 @@ val one_request :
   ?config:[ `H2 of H2.Config.t | `HTTP_1_1 of Httpaf.Config.t ] ->
   ?tls_config:Tls.Config.client ->
   t ->
+  ?authenticator:X509.Authenticator.t ->
   ?meth:Httpaf.Method.t ->
   ?headers:(string * string) list ->
   ?body:string ->
