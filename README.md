@@ -48,7 +48,7 @@ open Lwt.Infix
 
 module Make (HTTP_client : Http_mirage_client.S) = struct
   let start http_client =
-    Http_mirage_client.one_request http_client "https://google.com/"
+    Http_mirage_client.one_request http_client "https://mirage.io/"
     >>= function
     | Ok (resp, body) -> ...
     | Error _ -> ...
