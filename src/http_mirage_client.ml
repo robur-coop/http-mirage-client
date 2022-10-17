@@ -5,16 +5,23 @@ let tls_config = Mimic.make ~name:"tls-config"
 
 open Lwt.Infix
 
+type t =
+  { ctx : Mimic.ctx
+  ; alpn_protocol : Mimic.flow -> string option
+  ; authenticator : (X509.Authenticator.t, [ `Msg of string ]) result }
+
 module type S = sig
-  val connect : Mimic.ctx -> Mimic.ctx Lwt.t
-  val alpn_protocol : Mimic.flow -> string option
-  val authenticator : (X509.Authenticator.t, [> `Msg of string ]) result
+  type nonrec t = t
+
+  val connect : Mimic.ctx -> t Lwt.t
 end
 
 module Make
   (Pclock : Mirage_clock.PCLOCK)
   (TCP : Tcpip.Tcp.S)
   (Happy_eyeballs : Mimic_happy_eyeballs.S with type flow = TCP.flow) : S = struct
+  type nonrec t = t
+
   module TCP = struct
     include TCP
     type endpoint = Happy_eyeballs.t * string * int
@@ -60,23 +67,6 @@ module Make
   let tls_edn, tls_protocol =
     Mimic.register ~name:"tls" (module TLS)
 
-  let connect ctx =
-    let k0 happy_eyeballs http_scheme http_hostname http_port = match http_scheme with
-      | "http" -> Lwt.return_some (happy_eyeballs, http_hostname, http_port)
-      | _      -> Lwt.return_none in
-    let k1 happy_eyeballs http_scheme http_hostname http_port tls_config = match http_scheme with
-      | "https" -> Lwt.return_some (happy_eyeballs, tls_config, http_hostname, http_port)
-      | _       -> Lwt.return_none in
-    let ctx = Mimic.fold tcp_edn
-      Mimic.Fun.[ req Happy_eyeballs.happy_eyeballs
-                ; req http_scheme; req http_hostname; dft http_port 80 ]
-      ~k:k0 ctx in
-    Lwt.return (Mimic.fold tls_edn
-                  Mimic.Fun.[ req Happy_eyeballs.happy_eyeballs
-                            ; req http_scheme; req http_hostname; dft http_port 443
-                            ; req tls_config ]
-                  ~k:k1 ctx)
-
   let alpn_protocol flow =
     let module M = (val (Mimic.repr tls_protocol)) in
     match flow with
@@ -89,6 +79,24 @@ module Make
   let authenticator =
     let module V = Ca_certs_nss.Make (Pclock) in
     V.authenticator ()
+
+  let connect ctx =
+    let k0 happy_eyeballs http_scheme http_hostname http_port = match http_scheme with
+      | "http" -> Lwt.return_some (happy_eyeballs, http_hostname, http_port)
+      | _      -> Lwt.return_none in
+    let k1 happy_eyeballs http_scheme http_hostname http_port tls_config = match http_scheme with
+      | "https" -> Lwt.return_some (happy_eyeballs, tls_config, http_hostname, http_port)
+      | _       -> Lwt.return_none in
+    let ctx = Mimic.fold tcp_edn
+      Mimic.Fun.[ req Happy_eyeballs.happy_eyeballs
+                ; req http_scheme; req http_hostname; dft http_port 80 ]
+      ~k:k0 ctx in
+    let ctx = Mimic.fold tls_edn
+                  Mimic.Fun.[ req Happy_eyeballs.happy_eyeballs
+                            ; req http_scheme; req http_hostname; dft http_port 443
+                            ; req tls_config ]
+                  ~k:k1 ctx in
+    Lwt.return { ctx; alpn_protocol; authenticator; }
 end
 
 module Version = Httpaf.Version
@@ -283,7 +291,7 @@ let single_request ~ctx ~alpn_protocol ?config cfg ~meth ~headers ?body uri =
   Mimic.close flow >|= fun () ->
   r
 
-let tls_config ?tls_config ?config authenticator =
+let tls_config ?tls_config ?config authenticator user's_authenticator =
   lazy ( match tls_config with
   | Some cfg -> Ok (`Custom cfg)
   | None ->
@@ -291,7 +299,10 @@ let tls_config ?tls_config ?config authenticator =
       | None -> [ "h2"; "http/1.1" ]
       | Some (`H2 _) -> [ "h2" ]
       | Some (`HTTP_1_1 _) -> [ "http/1.1" ] in
-    Result.map (fun authenticator -> `Default (Tls.Config.client ~alpn_protocols ~authenticator ())) authenticator )
+    match authenticator, user's_authenticator with
+    | Ok authenticator, None -> Ok (`Default (Tls.Config.client ~alpn_protocols ~authenticator ()))
+    | _, Some authenticator -> Ok (`Default (Tls.Config.client ~alpn_protocols ~authenticator ()))
+    | (Error _ as err), None -> err )
 
 let resolve_location ~uri ~location =
   match String.split_on_char '/' location with
@@ -310,15 +321,14 @@ let resolve_location ~uri ~location =
 let one_request
   ?config
   ?tls_config:cfg
-  ~ctx
-  ~alpn_protocol
-  ~authenticator
+  { ctx; alpn_protocol; authenticator; }
+  ?authenticator:user's_authenticator
   ?(meth= `GET)
   ?(headers= [])
   ?body
   ?(max_redirect= 5)
   ?(follow_redirect= true) uri =
-  let tls_config = tls_config ?tls_config:cfg ?config authenticator in
+  let tls_config = tls_config ?tls_config:cfg ?config authenticator user's_authenticator in
   if not follow_redirect
   then single_request ~ctx ~alpn_protocol ?config tls_config ~meth ~headers ?body uri
   else
