@@ -37,6 +37,10 @@ let dns   = generic_dns_client stack
 let tcp   = tcpv4v6_of_stackv4v6 stack
 
 let http_client =
+  (* XXX(dinosaure): it seems unconventional to use [git_happy_eyeballs] here
+     when we want to do HTTP requests only. The name was not so good and we
+     will fix that into the next release of the mirage tool. But structurally,
+     you don't bring anything related to Git. It's just a bad choice of name. *)
   let happy_eyeballs = git_happy_eyeballs stack dns
     (generic_happy_eyeballs stack dns) in
   http_client $ default_posix_clock $ tcp $ happy_eyeballs
