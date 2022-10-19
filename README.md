@@ -57,6 +57,7 @@ module Make (HTTP_client : Http_mirage_client.S) = struct
     | Ok (resp, body) -> ...
     | Error _ -> ...
 end
+```
 
 [mirage]: https://mirage.io/
 [happy-eyeballs]: https://github.com/roburio/happy-eyeballs
