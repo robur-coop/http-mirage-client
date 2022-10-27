@@ -36,3 +36,8 @@ val request :
   -> (response -> 'a -> string -> 'a Lwt.t)
   -> 'a
   -> (response * 'a, [> Mimic.error ]) result Lwt.t
+(** [request ~config ~tls_config t ~authenticator ~meth ~headers ~body
+     ~max_redirect ~follow_redirect url body_f body_init] does a HTTP request
+    to [url] using [meth] and the HTTP protocol in [config]. The response is
+    the value of this function. The body is provided in chunks (see [body_f]).
+    Reasonably defaults are used if not provided. *)
