@@ -164,6 +164,9 @@ let single_http_1_1_request ?config flow user_pass host meth path headers body f
       if not !w then Lwt.wakeup_later notify_finished v
       ; w := true in
   let on_eof response data () =
+    wakeup (Ok (response, data))
+  in
+  let response_handler response body =
     let response =
       {
         version= response.Httpaf.Response.version
@@ -173,15 +176,12 @@ let single_http_1_1_request ?config flow user_pass host meth path headers body f
           H2.Headers.of_list
             (Httpaf.Headers.to_list response.Httpaf.Response.headers)
       } in
-    wakeup (Ok (response, data))
-  in
-  let response_handler response body =
-    let rec on_read on_eof data ba ~off ~len =
-      let data =
-        data >>= fun data ->
-        f data (Bigstringaf.substring ~off ~len ba)
+    let rec on_read on_eof acc ba ~off ~len =
+      let acc =
+        acc >>= fun acc ->
+        f response acc (Bigstringaf.substring ~off ~len ba)
       in
-      Httpaf.Body.schedule_read body ~on_read:(on_read on_eof data) ~on_eof:(on_eof response data)
+      Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc) ~on_eof:(on_eof response acc)
     in
     let f_init = Lwt.return f_init in
     Httpaf.Body.schedule_read body ~on_read:(on_read on_eof f_init) ~on_eof:(on_eof response f_init) in
@@ -222,6 +222,9 @@ let single_h2_request ?config ~scheme flow user_pass host meth path headers body
       if not !w then Lwt.wakeup_later notify_finished v
       ; w := true in
   let on_eof response data () =
+    wakeup (Ok (response, data))
+  in
+  let response_handler response response_body =
     let response =
       {
         version= {major= 2; minor= 0}
@@ -229,15 +232,12 @@ let single_h2_request ?config ~scheme flow user_pass host meth path headers body
       ; reason= ""
       ; headers= response.H2.Response.headers
       } in
-    wakeup (Ok (response, data))
-  in
-  let response_handler response response_body =
-    let rec on_read on_eof data ba ~off ~len =
-      let data =
-        data >>= fun data ->
-        f data (Bigstringaf.substring ~off ~len ba)
+    let rec on_read on_eof acc ba ~off ~len =
+      let acc =
+        acc >>= fun acc ->
+        f response acc (Bigstringaf.substring ~off ~len ba)
       in
-      H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof data) ~on_eof:(on_eof response data)
+      H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof acc) ~on_eof:(on_eof response acc)
     in
     let f_init = Lwt.return f_init in
     H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof f_init) ~on_eof:(on_eof response f_init) in

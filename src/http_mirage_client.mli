@@ -33,6 +33,6 @@ val request :
   -> ?max_redirect:int
   -> ?follow_redirect:bool
   -> string
-  -> ('a -> string -> 'a Lwt.t)
+  -> (response -> 'a -> string -> 'a Lwt.t)
   -> 'a
   -> (response * 'a, [> Mimic.error ]) result Lwt.t
