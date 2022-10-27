@@ -22,7 +22,7 @@ type response = {
   ; headers: Headers.t
 }
 
-val one_request :
+val request :
      ?config:[ `H2 of H2.Config.t | `HTTP_1_1 of Httpaf.Config.t ]
   -> ?tls_config:Tls.Config.client
   -> t
@@ -33,4 +33,6 @@ val one_request :
   -> ?max_redirect:int
   -> ?follow_redirect:bool
   -> string
-  -> (response * string option, [> Mimic.error ]) result Lwt.t
+  -> ('a -> string -> 'a Lwt.t)
+  -> 'a
+  -> (response * 'a, [> Mimic.error ]) result Lwt.t
