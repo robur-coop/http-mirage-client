@@ -153,7 +153,8 @@ let prepare_http_1_1_headers headers host user_pass body_length =
     | Some v -> add headers "content-length" (string_of_int v) in
   add_authentication ~add headers user_pass
 
-let single_http_1_1_request ?config flow user_pass host meth path headers body f f_init =
+let single_http_1_1_request
+    ?config flow user_pass host meth path headers body f f_init =
   let body_length = Option.map String.length body in
   let headers = prepare_http_1_1_headers headers host user_pass body_length in
   let req = Httpaf.Request.create ~headers meth path in
@@ -163,9 +164,7 @@ let single_http_1_1_request ?config flow user_pass host meth path headers body f
     fun v ->
       if not !w then Lwt.wakeup_later notify_finished v
       ; w := true in
-  let on_eof response data () =
-    wakeup (Ok (response, data))
-  in
+  let on_eof response data () = wakeup (Ok (response, data)) in
   let response_handler response body =
     let response =
       {
@@ -178,13 +177,13 @@ let single_http_1_1_request ?config flow user_pass host meth path headers body f
       } in
     let rec on_read on_eof acc ba ~off ~len =
       let acc =
-        acc >>= fun acc ->
-        f response acc (Bigstringaf.substring ~off ~len ba)
+        acc >>= fun acc -> f response acc (Bigstringaf.substring ~off ~len ba)
       in
-      Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc) ~on_eof:(on_eof response acc)
-    in
+      Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc)
+        ~on_eof:(on_eof response acc) in
     let f_init = Lwt.return f_init in
-    Httpaf.Body.schedule_read body ~on_read:(on_read on_eof f_init) ~on_eof:(on_eof response f_init) in
+    Httpaf.Body.schedule_read body ~on_read:(on_read on_eof f_init)
+      ~on_eof:(on_eof response f_init) in
   let error_handler e =
     let err =
       match e with
@@ -210,8 +209,8 @@ let prepare_h2_headers headers host user_pass body_length =
       (string_of_int (Option.value ~default:0 body_length)) in
   add_authentication ~add headers user_pass
 
-let single_h2_request ?config ~scheme flow user_pass host meth path headers body f f_init
-    =
+let single_h2_request
+    ?config ~scheme flow user_pass host meth path headers body f f_init =
   let body_length = Option.map String.length body in
   let headers = prepare_h2_headers headers host user_pass body_length in
   let req = H2.Request.create ~scheme ~headers meth path in
@@ -221,9 +220,7 @@ let single_h2_request ?config ~scheme flow user_pass host meth path headers body
     fun v ->
       if not !w then Lwt.wakeup_later notify_finished v
       ; w := true in
-  let on_eof response data () =
-    wakeup (Ok (response, data))
-  in
+  let on_eof response data () = wakeup (Ok (response, data)) in
   let response_handler response response_body =
     let response =
       {
@@ -234,13 +231,13 @@ let single_h2_request ?config ~scheme flow user_pass host meth path headers body
       } in
     let rec on_read on_eof acc ba ~off ~len =
       let acc =
-        acc >>= fun acc ->
-        f response acc (Bigstringaf.substring ~off ~len ba)
+        acc >>= fun acc -> f response acc (Bigstringaf.substring ~off ~len ba)
       in
-      H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof acc) ~on_eof:(on_eof response acc)
-    in
+      H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof acc)
+        ~on_eof:(on_eof response acc) in
     let f_init = Lwt.return f_init in
-    H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof f_init) ~on_eof:(on_eof response f_init) in
+    H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof f_init)
+      ~on_eof:(on_eof response f_init) in
   let error_handler e =
     let err =
       match e with
@@ -309,7 +306,8 @@ let alpn_protocol_of_string = function
   | "h2" -> Some `H2
   | _ -> None
 
-let single_request ~ctx ~alpn_protocol ?config cfg ~meth ~headers ?body uri f f_init =
+let single_request
+    ~ctx ~alpn_protocol ?config cfg ~meth ~headers ?body uri f f_init =
   Lwt.return (decode_uri ~ctx uri)
   >>? fun (ctx, scheme, host, user_pass, path) ->
   let ctx =
@@ -323,15 +321,19 @@ let single_request ~ctx ~alpn_protocol ?config cfg ~meth ~headers ?body uri f f_
   Mimic.resolve ctx >>? fun flow ->
   (match Option.bind (alpn_protocol flow) alpn_protocol_of_string, config with
   | (Some `HTTP_1_1 | None), Some (`HTTP_1_1 config) ->
-    single_http_1_1_request ~config flow user_pass host meth path headers body f f_init
+    single_http_1_1_request ~config flow user_pass host meth path headers body f
+      f_init
   | (Some `HTTP_1_1 | None), None ->
     single_http_1_1_request flow user_pass host meth path headers body f f_init
   | (Some `H2 | None), Some (`H2 config) ->
-    single_h2_request ~config ~scheme flow user_pass host meth path headers body f f_init
+    single_h2_request ~config ~scheme flow user_pass host meth path headers body
+      f f_init
   | Some `H2, None ->
-    single_h2_request ~scheme flow user_pass host meth path headers body f f_init
+    single_h2_request ~scheme flow user_pass host meth path headers body f
+      f_init
   | Some `H2, Some (`HTTP_1_1 _) ->
-    single_h2_request ~scheme flow user_pass host meth path headers body f f_init
+    single_h2_request ~scheme flow user_pass host meth path headers body f
+      f_init
   | Some `HTTP_1_1, Some (`H2 _) ->
     single_http_1_1_request flow user_pass host meth path headers body f f_init)
   >>= fun r ->
