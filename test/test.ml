@@ -113,7 +113,55 @@ let test01 =
     let body = Buffer.contents buf in
     Alcotest.(check string) "body" "Hello World!" body ;
     Lwt.return_unit
+
+let random_string ~len =
+  let res = Bytes.create len in
+  for i = 0 to len - 1 do
+    Bytes.set res i (Char.chr (Random.bits () land 0xff))
+  done ; Bytes.unsafe_to_string res
+
+let test02 =
+  Alcotest_lwt.test_case "Repeat (POST)" `Quick @@ fun _sw () ->
+  let open Lwt.Syntax in
+  let stop = Lwt_switch.create () in
+  let handler reqd =
+    let open Httpaf in
+    let { Request.meth; _ } = Reqd.request reqd in
+    if meth <> `POST then invalid_arg "Invalid HTTP method" ;
+    let headers = Headers.of_list
+      [ "content-type", "text/plain" ] in
+    let response = Response.create ~headers `OK in
+    let src = Reqd.request_body reqd in
+    let dst = Reqd.respond_with_streaming reqd response in
+    let rec on_eof () =
+      Body.close_reader src ;
+      Body.close_writer dst
+    and on_read buf ~off ~len =
+      Body.write_bigstring dst ~off ~len buf ;
+      Body.schedule_read src ~on_eof ~on_read in
+    Body.schedule_read src ~on_eof ~on_read in
+  let* stack = stack Ipaddr.V4.Prefix.loopback in
+  let happy_eyeballs = Happy_eyeballs.create stack in
+  let* ctx = Mimic_happy_eyeballs.connect happy_eyeballs in
+  let* t = HTTP_client.connect ctx in
+  let* `Initialized _thread = server ~stop (Tcpip_stack_socket.V4V6.tcp stack)
+    (`HTTP_1_1 (8080, handler)) in
+  let str = random_string ~len:0x1000 in
+  let* result = Http_mirage_client.request ~meth:`POST ~body:str t "http://localhost:8080/"
+    (fun _response buf str -> Buffer.add_string buf str ; Lwt.return buf)
+    (Buffer.create 0x1000) in
+  match result with
+  | Error err ->
+    let* () = Lwt_switch.turn_off stop in
+    let* () = Tcpip_stack_socket.V4V6.disconnect stack in
+    Alcotest.failf "Client error: %a" Mimic.pp_error err
+  | Ok (_response, buf) ->
+    let* () = Lwt_switch.turn_off stop in
+    let* () = Tcpip_stack_socket.V4V6.disconnect stack in
+    let body = Buffer.contents buf in
+    Alcotest.(check string) "body" str body ;
+    Lwt.return_unit
  
  let () = Alcotest_lwt.run "http-mirage-client"
-     [ "simple", [ test01 ] ]
+     [ "http/1.1", [ test01; test02 ] ]
    |> Lwt_main.run

@@ -6,4 +6,5 @@
 
 (rule
  (alias runtest)
- (action (run ./test.exe --color=always)))
+ (action
+  (run ./test.exe --color=always)))
