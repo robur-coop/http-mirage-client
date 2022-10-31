@@ -1,0 +1,9 @@
+(executable
+ (name test)
+ (libraries http-mirage-client tcpip.stack-socket paf.mirage
+   mirage-clock-unix mirage-random-stdlib happy-eyeballs-lwt mirage-time-unix
+   mimic-happy-eyeballs alcotest-lwt))
+
+(rule
+ (alias runtest)
+ (action (run ./test.exe --color=always)))
