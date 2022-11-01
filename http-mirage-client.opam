@@ -17,6 +17,7 @@ depends: [
   "lwt" {>= "5.5.0"}
   "mimic-happy-eyeballs"
   "httpaf"
+  "alcotest-lwt" {with-test}
   "h2"
 ]
 build: [
