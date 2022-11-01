@@ -18,6 +18,9 @@ depends: [
   "mimic-happy-eyeballs"
   "httpaf"
   "alcotest-lwt" {with-test}
+  "mirage-clock-unix" {with-test}
+  "mirage-random-stdlib" {with-test}
+  "mirage-time-unix" {with-test}
   "h2"
 ]
 build: [
