@@ -1,7 +1,7 @@
 (executable
  (name test)
  (libraries http-mirage-client tcpip.stack-socket paf.mirage
-   mirage-clock-unix mirage-random-stdlib happy-eyeballs-lwt mirage-time-unix
+   mirage-clock-unix mirage-random-stdlib mirage-time-unix
    mimic-happy-eyeballs alcotest-lwt))
 
 (rule
