@@ -177,6 +177,8 @@ let single_http_1_1_request
       } in
     let rec on_read on_eof acc ba ~off ~len =
       let str = Bigstringaf.substring ~off ~len ba in
+      (* XXX(dinosaure): the copy must be done **before** any [>>=].
+         The given [ba] is re-used by the [Httpaf] scheduler then. *)
       let acc =
         acc >>= fun acc -> f response acc str 
       in
@@ -232,6 +234,8 @@ let single_h2_request
       } in
     let rec on_read on_eof acc ba ~off ~len =
       let str = Bigstringaf.substring ~off ~len ba in
+      (* XXX(dinosaure): the copy must be done **before** any [>>=].
+         The given [ba] is re-used by the [H2] scheduler then. *)
       let acc =
         acc >>= fun acc -> f response acc str
       in
