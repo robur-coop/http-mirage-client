@@ -176,8 +176,9 @@ let single_http_1_1_request
             (Httpaf.Headers.to_list response.Httpaf.Response.headers)
       } in
     let rec on_read on_eof acc ba ~off ~len =
+      let str = Bigstringaf.substring ~off ~len ba in
       let acc =
-        acc >>= fun acc -> f response acc (Bigstringaf.substring ~off ~len ba)
+        acc >>= fun acc -> f response acc str 
       in
       Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc)
         ~on_eof:(on_eof response acc) in
@@ -230,8 +231,9 @@ let single_h2_request
       ; headers= response.H2.Response.headers
       } in
     let rec on_read on_eof acc ba ~off ~len =
+      let str = Bigstringaf.substring ~off ~len ba in
       let acc =
-        acc >>= fun acc -> f response acc (Bigstringaf.substring ~off ~len ba)
+        acc >>= fun acc -> f response acc str
       in
       H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof acc)
         ~on_eof:(on_eof response acc) in
