@@ -1,7 +1,7 @@
 (* Functoria *)
 
 module DNS_client =
-  Dns_client_mirage.Make (Mirage_random_stdlib) (Time) (Mclock) (Pclock)
+  Dns_client_mirage.Make (Mirage_crypto_rng) (Time) (Mclock) (Pclock)
     (Tcpip_stack_socket.V4V6)
 
 module Happy_eyeballs =
