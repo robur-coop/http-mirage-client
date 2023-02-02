@@ -21,6 +21,7 @@ depends: [
   "mirage-clock-unix" {with-test}
   "mirage-random-stdlib" {with-test}
   "mirage-time-unix" {with-test}
+  "mirage-entropy" {with-test & >= "0.5.0"} # dependency issue with mirage-random-stdlib
   "h2"
 ]
 build: [
