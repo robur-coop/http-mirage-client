@@ -113,14 +113,16 @@ let server ?error ?stop stack = function
     let alpn_service = HTTP_server.alpn_service ~tls alpn_handler in
     HTTP_server.serve ?stop alpn_service http_server
 
-let stack ipaddr =
+let stack () =
   let open Lwt.Syntax in
+  let ip = Ipaddr.V4.(Prefix.make 8 localhost) in
+  let ipv4_only = true and ipv6_only = false in
   let* tcpv4v6 =
-    Tcpip_stack_socket.V4V6.TCP.connect ~ipv4_only:false ~ipv6_only:false ipaddr
-      None in
+    Tcpip_stack_socket.V4V6.TCP.connect ~ipv4_only ~ipv6_only ip None
+  in
   let* udpv4v6 =
-    Tcpip_stack_socket.V4V6.UDP.connect ~ipv4_only:false ~ipv6_only:false ipaddr
-      None in
+    Tcpip_stack_socket.V4V6.UDP.connect ~ipv4_only ~ipv6_only ip None
+  in
   Tcpip_stack_socket.V4V6.connect udpv4v6 tcpv4v6
 
 let test01 =
@@ -139,7 +141,7 @@ let test01 =
         ] in
     let response = Response.create ~headers `OK in
     Reqd.respond_with_string reqd response contents in
-  let* stack = stack Ipaddr.V4.Prefix.loopback in
+  let* stack = stack () in
   let happy_eyeballs = Happy_eyeballs.create stack in
   let* ctx = Mimic_happy_eyeballs.connect happy_eyeballs in
   let* t = HTTP_client.connect ctx in
@@ -186,7 +188,7 @@ let test02 =
         Body.write_bigstring dst ~off ~len buf
         ; Body.schedule_read src ~on_eof ~on_read in
       Body.schedule_read src ~on_eof ~on_read in
-  let* stack = stack Ipaddr.V4.Prefix.loopback in
+  let* stack = stack () in
   let happy_eyeballs = Happy_eyeballs.create stack in
   let* ctx = Mimic_happy_eyeballs.connect happy_eyeballs in
   let* t = HTTP_client.connect ctx in
