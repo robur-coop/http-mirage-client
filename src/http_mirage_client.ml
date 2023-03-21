@@ -257,7 +257,7 @@ let single_h2_request
       | `Exn e -> Error (`Msg ("Exception here: " ^ Printexc.to_string e)) in
     wakeup err in
   let conn =
-    H2.Client_connection.create ?config ?push_handler:None ~error_handler in
+    H2.Client_connection.create ?config ?push_handler:None ~error_handler () in
   let request_body =
     H2.Client_connection.request conn req ~error_handler ~response_handler in
   Lwt.async (fun () -> Paf.run (module H2.Client_connection) conn flow)
