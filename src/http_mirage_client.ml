@@ -204,7 +204,8 @@ let single_http_1_1_request
   ; finished
 
 let prepare_h2_headers headers host user_pass body_length =
-  let headers = H2.Headers.of_list headers in
+  let headers = List.rev_map (fun (k, v) -> (String.lowercase_ascii k, v)) headers in
+  let headers = H2.Headers.of_rev_list headers in
   let add hdr = H2.Headers.add_unless_exists hdr ?sensitive:None in
   let headers = add headers ":authority" host in
   let headers =
