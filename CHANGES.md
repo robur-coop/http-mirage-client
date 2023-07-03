@@ -1,3 +1,7 @@
+# v0.0.4 2023-07-03 - Berlin (Germany)
+
+* Always lowercase the header keys in HTTP2 (as in http-lwt-client#19, @hannesm)
+
 # v0.0.3 2023-03-21 - Himmelpfort (Germany)
 
 * Adapt to h2 0.10.0 API change, fix test for FreeBSD (#4, @hannesm)
