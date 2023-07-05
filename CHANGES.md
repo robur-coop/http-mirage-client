@@ -1,3 +1,7 @@
+# v0.0.5 2023-07-05 - Berlin (Germany)
+
+* Order http2 headers appropriately to avoid malformed requests (as in http-lwt-client#20, @hannesm)
+
 # v0.0.4 2023-07-03 - Berlin (Germany)
 
 * Always lowercase the header keys in HTTP2 (as in http-lwt-client#19, @hannesm)
