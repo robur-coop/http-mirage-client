@@ -5,6 +5,9 @@ let tls_config = Mimic.make ~name:"tls-config"
 
 open Lwt.Infix
 
+let src = Logs.Src.create "http_mirage_client" ~doc:"HTTP client"
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type t = {
     ctx: Mimic.ctx
   ; alpn_protocol: Mimic.flow -> string option
@@ -141,10 +144,12 @@ let add_authentication ~add headers = function
     let data = Base64.encode_string (user ^ ":" ^ pass) in
     add headers "authorization" ("Basic " ^ data)
 
+let user_agent = "http-mirage-client/%%VERSION_NUM%%"
+
 let prepare_http_1_1_headers headers host user_pass body_length =
   let headers = Httpaf.Headers.of_list headers in
   let add = Httpaf.Headers.add_unless_exists in
-  let headers = add headers "user-agent" "http-mirage-client/%%VERSION%%" in
+  let headers = add headers "user-agent" user_agent in
   let headers = add headers "host" host in
   let headers = add headers "connection" "close" in
   let headers =
@@ -180,7 +185,7 @@ let single_http_1_1_request
       (* XXX(dinosaure): the copy must be done **before** any [>>=].
          The given [ba] is re-used by the [Httpaf] scheduler then. *)
       let acc =
-        acc >>= fun acc -> f response acc str 
+        acc >>= fun acc -> f response acc str
       in
       Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc)
         ~on_eof:(on_eof response acc) in
@@ -204,14 +209,41 @@ let single_http_1_1_request
   ; finished
 
 let prepare_h2_headers headers host user_pass body_length =
+  (* please note, that h2 (at least in version 0.10.0) encodes the headers
+     in reverse order ; and for http/2 compatibility we need to retain the
+     :authority pseudo-header first (after method/scheme/... that are encoded
+     specially *)
+  (* also note that "host" is no longer a thing, but :authority is -- so if
+     we find a host header, we'll rephrase that as authority. *)
   let headers = List.rev_map (fun (k, v) -> (String.lowercase_ascii k, v)) headers in
   let headers = H2.Headers.of_rev_list headers in
+  let headers, authority =
+    match
+      H2.Headers.get headers "host",
+      H2.Headers.get headers ":authority"
+    with
+    | None, None -> headers, host
+    | Some h, None ->
+      Log.debug (fun m -> m "removing host header (inserting authority instead)");
+      H2.Headers.remove headers "host", h
+    | None, Some a ->
+      H2.Headers.remove headers ":authority", a
+    | Some h, Some a ->
+      if String.equal h a then
+        H2.Headers.remove (H2.Headers.remove headers ":authority") "host", h
+      else begin
+        Log.warn (fun m -> m "authority header %s mismatches host %s (keeping both)" a h);
+        H2.Headers.remove headers ":authority", a
+      end
+  in
   let add hdr = H2.Headers.add_unless_exists hdr ?sensitive:None in
-  let headers = add headers ":authority" host in
-  let headers =
-    add headers "content-length"
+  let hdr = add H2.Headers.empty ":authority" authority in
+  let hdr = H2.Headers.add_list hdr (H2.Headers.to_rev_list headers) in
+  let hdr = add hdr "user-agent" user_agent in
+  let hdr =
+    add hdr "content-length"
       (string_of_int (Option.value ~default:0 body_length)) in
-  add_authentication ~add headers user_pass
+  add_authentication ~add hdr user_pass
 
 let single_h2_request
     ?config ~scheme flow user_pass host meth path headers body f f_init =
