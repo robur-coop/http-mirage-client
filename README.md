@@ -61,7 +61,7 @@ end
 ```
 
 [mirage]: https://mirage.io/
-[happy-eyeballs]: https://github.com/roburio/happy-eyeballs
+[happy-eyeballs]: https://github.com/robur-coop/happy-eyeballs
 [ocaml-tls]: https://github.com/mirleft/ocaml-tls
 [paf]: https://github.com/dinosaure/paf-le-chien
-[http-lwt-client]: https://github.com/roburio/http-lwt-client
+[http-lwt-client]: https://github.com/robur-coop/http-lwt-client

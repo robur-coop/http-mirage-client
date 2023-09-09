@@ -5,8 +5,8 @@ authors: [
   "Robur Team <team@robur.coop>"
 ]
 license: "MIT"
-homepage: "https://github.com/roburio/http-mirage-client"
-bug-reports: "https://github.com/roburio/http-mirage-client/issues"
+homepage: "https://github.com/robur-coop/http-mirage-client"
+bug-reports: "https://github.com/robur-coop/http-mirage-client/issues"
 depends: [
   "dune" {>= "2.3"}
   "ocaml" {>= "4.11.0"}
@@ -37,4 +37,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/roburio/http-mirage-client.git"
+dev-repo: "git+https://github.com/robur-coop/http-mirage-client.git"
