@@ -1,6 +1,6 @@
 (executable
  (name test)
- (libraries http-mirage-client tcpip.stack-socket paf.mirage
+ (libraries fmt.tty logs.fmt http-mirage-client tcpip.stack-socket paf.mirage
    mirage-clock-unix mirage-crypto-rng mirage-time-unix
    mimic-happy-eyeballs alcotest-lwt))
 

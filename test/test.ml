@@ -1,16 +1,33 @@
-(* Functoria *)
+let reporter ppf =
+  let report src level ~over k msgf =
+    let k _ =
+      over () ;
+      k () in
+    let with_metadata header _tags k ppf fmt =
+      Format.kfprintf k ppf
+        ("%a[%a]: " ^^ fmt ^^ "\n%!")
+        Logs_fmt.pp_header (level, header)
+        Fmt.(styled `Magenta string)
+        (Logs.Src.name src) in
+    msgf @@ fun ?header ?tags fmt -> with_metadata header tags k ppf fmt in
+  { Logs.report }
 
-module DNS_client =
-  Dns_client_mirage.Make (Mirage_crypto_rng) (Time) (Mclock) (Pclock)
-    (Tcpip_stack_socket.V4V6)
+let () = Fmt_tty.setup_std_outputs ~style_renderer:`Ansi_tty ~utf_8:true ()
+let () = Logs.set_reporter (reporter Fmt.stdout)
+let () = Logs.set_level ~all:true (Some Logs.Debug)
+
+(* Functoria *)
 
 module Happy_eyeballs =
   Happy_eyeballs_mirage.Make (Time) (Mclock) (Tcpip_stack_socket.V4V6)
-    (DNS_client)
+
+module DNS_client =
+  Dns_client_mirage.Make (Mirage_crypto_rng) (Time) (Mclock) (Pclock)
+    (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
 
 module Mimic_happy_eyeballs =
-  Mimic_happy_eyeballs.Make (Tcpip_stack_socket.V4V6) (DNS_client)
-    (Happy_eyeballs)
+  Mimic_happy_eyeballs.Make (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
+    (DNS_client)
 
 module HTTP_server = Paf_mirage.Make (Tcpip_stack_socket.V4V6.TCP)
 
@@ -149,7 +166,7 @@ let test01 =
     server ~stop (Tcpip_stack_socket.V4V6.tcp stack) (`HTTP_1_1 (8080, handler))
   in
   let* result =
-    Http_mirage_client.request t "http://localhost:8080/"
+    Http_mirage_client.request t "http://127.0.0.1:8080/"
       (fun _response buf str -> Buffer.add_string buf str ; Lwt.return buf)
       (Buffer.create 0x100) in
   match result with
@@ -197,7 +214,7 @@ let test02 =
   in
   let str = random_string ~len:0x1000 in
   let* result =
-    Http_mirage_client.request ~meth:`POST ~body:str t "http://localhost:8080/"
+    Http_mirage_client.request ~meth:`POST ~body:str t "http://127.0.0.1:8080/"
       (fun _response buf str -> Buffer.add_string buf str ; Lwt.return buf)
       (Buffer.create 0x1000) in
   match result with
