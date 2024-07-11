@@ -1,3 +1,7 @@
+# v0.0.6 2024-07-11 - Tokyo (Japan)
+
+- Update the package with `mimic-happy-eyeballs.0.0.9` (#3, @dinosaure)
+
 # v0.0.5 2023-07-05 - Berlin (Germany)
 
 * Order http2 headers appropriately to avoid malformed requests (as in http-lwt-client#20, @hannesm)
