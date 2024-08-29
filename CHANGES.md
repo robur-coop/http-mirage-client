@@ -1,3 +1,7 @@
+# v0.0.7 2024-08-29 - Himmelpfort (Germany)
+
+- Adapt to TLS 1.0.0 API changes (#1, @hannesm)
+
 # v0.0.6 2024-07-11 - Tokyo (Japan)
 
 - Update the package with `mimic-happy-eyeballs.0.0.9` (#3, @dinosaure)
