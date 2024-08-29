@@ -1,8 +1,6 @@
 let reporter ppf =
   let report src level ~over k msgf =
-    let k _ =
-      over () ;
-      k () in
+    let k _ = over () ; k () in
     let with_metadata header _tags k ppf fmt =
       Format.kfprintf k ppf
         ("%a[%a]: " ^^ fmt ^^ "\n%!")
@@ -10,7 +8,7 @@ let reporter ppf =
         Fmt.(styled `Magenta string)
         (Logs.Src.name src) in
     msgf @@ fun ?header ?tags fmt -> with_metadata header tags k ppf fmt in
-  { Logs.report }
+  {Logs.report}
 
 let () = Fmt_tty.setup_std_outputs ~style_renderer:`Ansi_tty ~utf_8:true ()
 let () = Logs.set_reporter (reporter Fmt.stdout)
@@ -23,7 +21,8 @@ module Happy_eyeballs =
 
 module DNS_client =
   Dns_client_mirage.Make (Mirage_crypto_rng) (Time) (Mclock) (Pclock)
-    (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
+    (Tcpip_stack_socket.V4V6)
+    (Happy_eyeballs)
 
 module Mimic_happy_eyeballs =
   Mimic_happy_eyeballs.Make (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
@@ -135,11 +134,9 @@ let stack () =
   let ip = Ipaddr.V4.(Prefix.make 8 localhost) in
   let ipv4_only = true and ipv6_only = false in
   let* tcpv4v6 =
-    Tcpip_stack_socket.V4V6.TCP.connect ~ipv4_only ~ipv6_only ip None
-  in
+    Tcpip_stack_socket.V4V6.TCP.connect ~ipv4_only ~ipv6_only ip None in
   let* udpv4v6 =
-    Tcpip_stack_socket.V4V6.UDP.connect ~ipv4_only ~ipv6_only ip None
-  in
+    Tcpip_stack_socket.V4V6.UDP.connect ~ipv4_only ~ipv6_only ip None in
   Tcpip_stack_socket.V4V6.connect udpv4v6 tcpv4v6
 
 let test01 =

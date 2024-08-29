@@ -6,6 +6,7 @@ let tls_config = Mimic.make ~name:"tls-config"
 open Lwt.Infix
 
 let src = Logs.Src.create "http_mirage_client" ~doc:"HTTP client"
+
 module Log = (val Logs.src_log src : Logs.LOG)
 
 type t = {
@@ -184,9 +185,7 @@ let single_http_1_1_request
       let str = Bigstringaf.substring ~off ~len ba in
       (* XXX(dinosaure): the copy must be done **before** any [>>=].
          The given [ba] is re-used by the [Httpaf] scheduler then. *)
-      let acc =
-        acc >>= fun acc -> f response acc str
-      in
+      let acc = acc >>= fun acc -> f response acc str in
       Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc)
         ~on_eof:(on_eof response acc) in
     let f_init = Lwt.return f_init in
@@ -215,27 +214,27 @@ let prepare_h2_headers headers host user_pass body_length =
      specially *)
   (* also note that "host" is no longer a thing, but :authority is -- so if
      we find a host header, we'll rephrase that as authority. *)
-  let headers = List.rev_map (fun (k, v) -> (String.lowercase_ascii k, v)) headers in
+  let headers =
+    List.rev_map (fun (k, v) -> String.lowercase_ascii k, v) headers in
   let headers = H2.Headers.of_rev_list headers in
   let headers, authority =
     match
-      H2.Headers.get headers "host",
-      H2.Headers.get headers ":authority"
+      H2.Headers.get headers "host", H2.Headers.get headers ":authority"
     with
     | None, None -> headers, host
     | Some h, None ->
-      Log.debug (fun m -> m "removing host header (inserting authority instead)");
-      H2.Headers.remove headers "host", h
-    | None, Some a ->
-      H2.Headers.remove headers ":authority", a
+      Log.debug (fun m ->
+          m "removing host header (inserting authority instead)")
+      ; H2.Headers.remove headers "host", h
+    | None, Some a -> H2.Headers.remove headers ":authority", a
     | Some h, Some a ->
       if String.equal h a then
         H2.Headers.remove (H2.Headers.remove headers ":authority") "host", h
       else begin
-        Log.warn (fun m -> m "authority header %s mismatches host %s (keeping both)" a h);
-        H2.Headers.remove headers ":authority", a
-      end
-  in
+        Log.warn (fun m ->
+            m "authority header %s mismatches host %s (keeping both)" a h)
+        ; H2.Headers.remove headers ":authority", a
+      end in
   let add hdr = H2.Headers.add_unless_exists hdr ?sensitive:None in
   let hdr = add H2.Headers.empty ":authority" authority in
   let hdr = H2.Headers.add_list hdr (H2.Headers.to_rev_list headers) in
@@ -269,9 +268,7 @@ let single_h2_request
       let str = Bigstringaf.substring ~off ~len ba in
       (* XXX(dinosaure): the copy must be done **before** any [>>=].
          The given [ba] is re-used by the [H2] scheduler then. *)
-      let acc =
-        acc >>= fun acc -> f response acc str
-      in
+      let acc = acc >>= fun acc -> f response acc str in
       H2.Body.Reader.schedule_read response_body ~on_read:(on_read on_eof acc)
         ~on_eof:(on_eof response acc) in
     let f_init = Lwt.return f_init in
@@ -290,7 +287,8 @@ let single_h2_request
       | `Exn e -> Error (`Msg ("Exception here: " ^ Printexc.to_string e)) in
     wakeup err in
   let conn =
-    H2.Client_connection.create ?config ?push_handler:None ~error_handler () in
+    H2.Client_connection.create ?config ?push_handler:None ~error_handler ()
+  in
   let request_body =
     H2.Client_connection.request conn req ~error_handler ~response_handler in
   Lwt.async (fun () -> Paf.run (module H2.Client_connection) conn flow)
@@ -305,10 +303,10 @@ let decode_uri ~ctx uri =
   match String.split_on_char '/' uri with
   | proto :: "" :: user_pass_host_port :: path ->
     (if String.equal proto "http:" then
-     Ok ("http", Mimic.add http_scheme "http" ctx)
-    else if String.equal proto "https:" then
-      Ok ("https", Mimic.add http_scheme "https" ctx)
-    else Error (`Msg "Couldn't decode user and password"))
+       Ok ("http", Mimic.add http_scheme "http" ctx)
+     else if String.equal proto "https:" then
+       Ok ("https", Mimic.add http_scheme "https" ctx)
+     else Error (`Msg "Couldn't decode user and password"))
     >>= fun (scheme, ctx) ->
     let decode_user_pass up =
       match String.split_on_char ':' up with
@@ -383,20 +381,22 @@ let single_request
 
 let tls_config ?tls_config ?config authenticator user's_authenticator =
   lazy
-    (match tls_config with
-    | Some cfg -> Ok (`Custom cfg)
-    | None -> (
-      let alpn_protocols =
-        match config with
-        | None -> ["h2"; "http/1.1"]
-        | Some (`H2 _) -> ["h2"]
-        | Some (`HTTP_1_1 _) -> ["http/1.1"] in
-      match authenticator, user's_authenticator with
-      | Ok authenticator, None ->
-        Ok (`Default (Tls.Config.client ~alpn_protocols ~authenticator ()))
-      | _, Some authenticator ->
-        Ok (`Default (Tls.Config.client ~alpn_protocols ~authenticator ()))
-      | (Error _ as err), None -> err))
+    (let ( let* ) = Result.bind in
+     match tls_config with
+     | Some cfg -> Ok (`Custom cfg)
+     | None ->
+       let alpn_protocols =
+         match config with
+         | None -> ["h2"; "http/1.1"]
+         | Some (`H2 _) -> ["h2"]
+         | Some (`HTTP_1_1 _) -> ["http/1.1"] in
+       let* authenticator =
+         match authenticator, user's_authenticator with
+         | Ok authenticator, None -> Ok authenticator
+         | _, Some authenticator -> Ok authenticator
+         | (Error _ as err), None -> err in
+       let* cfg = Tls.Config.client ~alpn_protocols ~authenticator () in
+       Ok (`Default cfg))
 
 let resolve_location ~uri ~location =
   match String.split_on_char '/' location with

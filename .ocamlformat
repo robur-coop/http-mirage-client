@@ -1,4 +1,4 @@
-version=0.23.0
+version=0.26.2
 profile=conventional
 break-struct=natural
 break-infix=fit-or-vertical
