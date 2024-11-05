@@ -434,6 +434,12 @@ let request
     let rec follow_redirect count uri =
       if count = 0 then Lwt.return_error (`Msg "Redirect limit exceeded")
       else
+        let f response acc body =
+          if Status.is_redirection response.status then
+            Lwt.return acc
+          else
+            f response acc body
+        in
         single_request ~ctx ~alpn_protocol ?config tls_config ~meth ~headers
           ?body uri f f_init
         >>? fun (resp, body) ->
