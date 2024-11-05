@@ -40,4 +40,6 @@ val request :
      ~max_redirect ~follow_redirect url body_f body_init] does a HTTP request
     to [url] using [meth] and the HTTP protocol in [config]. The response is
     the value of this function. The body is provided in chunks (see [body_f]).
+    If [follow_redirect] is enabled (true by default), [body_f] is not called
+    with the potential body of the redirection.
     Reasonably defaults are used if not provided. *)
