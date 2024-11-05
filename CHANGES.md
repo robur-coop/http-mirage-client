@@ -1,3 +1,7 @@
+# v0.0.8 2024-11-05 - Berlin (Germany)
+
+- Do not call [f_body] with a redirect body (#2 @hannesm)
+
 # v0.0.7 2024-08-29 - Himmelpfort (Germany)
 
 - Adapt to TLS 1.0.0 API changes (#1, @hannesm)
