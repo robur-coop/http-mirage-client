@@ -22,7 +22,6 @@ module type S = sig
 end
 
 module Make
-    (Pclock : Mirage_clock.PCLOCK)
     (TCP : Tcpip.Tcp.S)
     (Happy_eyeballs : Mimic_happy_eyeballs.S with type flow = TCP.flow) : S =
 struct
@@ -86,9 +85,7 @@ struct
       | Error _ -> None)
     | _ -> None
 
-  let authenticator =
-    let module V = Ca_certs_nss.Make (Pclock) in
-    V.authenticator ()
+  let authenticator = Ca_certs_nss.authenticator ()
 
   let connect ctx =
     let k0 happy_eyeballs http_scheme http_hostname http_port =

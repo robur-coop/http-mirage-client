@@ -17,12 +17,10 @@ let () = Logs.set_level ~all:true (Some Logs.Debug)
 (* Functoria *)
 
 module Happy_eyeballs =
-  Happy_eyeballs_mirage.Make (Time) (Mclock) (Tcpip_stack_socket.V4V6)
+  Happy_eyeballs_mirage.Make (Tcpip_stack_socket.V4V6)
 
 module DNS_client =
-  Dns_client_mirage.Make (Mirage_crypto_rng) (Time) (Mclock) (Pclock)
-    (Tcpip_stack_socket.V4V6)
-    (Happy_eyeballs)
+  Dns_client_mirage.Make (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
 
 module Mimic_happy_eyeballs =
   Mimic_happy_eyeballs.Make (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
@@ -31,8 +29,7 @@ module Mimic_happy_eyeballs =
 module HTTP_server = Paf_mirage.Make (Tcpip_stack_socket.V4V6.TCP)
 
 module HTTP_client =
-  Http_mirage_client.Make (Pclock) (Tcpip_stack_socket.V4V6.TCP)
-    (Mimic_happy_eyeballs)
+  Http_mirage_client.Make (Tcpip_stack_socket.V4V6.TCP) (Mimic_happy_eyeballs)
 
 let http_1_1_error_handler ?notify (ipaddr, port) ?request:_ error respond =
   let contents =
