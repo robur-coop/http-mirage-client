@@ -1,4 +1,5 @@
 (library
  (name http_mirage_client)
  (public_name http-mirage-client)
- (libraries paf x509 tcpip mimic-happy-eyeballs httpaf h2 ca-certs-nss))
+ (libraries paf x509 tcpip mimic-happy-eyeballs httpaf h2 ca-certs-nss tls
+   tls-mirage))

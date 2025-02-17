@@ -1,3 +1,7 @@
+# v0.0.9 2025-02-17 - Berlin (Germany)
+
+- Remove unnecessary functors (@hannesm)
+
 # v0.0.8 2024-11-05 - Berlin (Germany)
 
 - Do not call [f_body] with a redirect body (#2 @hannesm)

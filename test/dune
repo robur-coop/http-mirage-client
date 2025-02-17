@@ -1,7 +1,7 @@
 (executable
  (name test)
  (libraries fmt.tty logs.fmt http-mirage-client tcpip.stack-socket paf.mirage
-   mirage-crypto-rng mimic-happy-eyeballs alcotest-lwt))
+   mirage-crypto-rng mimic-happy-eyeballs alcotest-lwt dns-client-mirage))
 
 (rule
  (alias runtest)
