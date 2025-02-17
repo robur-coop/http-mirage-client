@@ -16,8 +16,7 @@ let () = Logs.set_level ~all:true (Some Logs.Debug)
 
 (* Functoria *)
 
-module Happy_eyeballs =
-  Happy_eyeballs_mirage.Make (Tcpip_stack_socket.V4V6)
+module Happy_eyeballs = Happy_eyeballs_mirage.Make (Tcpip_stack_socket.V4V6)
 
 module DNS_client =
   Dns_client_mirage.Make (Tcpip_stack_socket.V4V6) (Happy_eyeballs)
