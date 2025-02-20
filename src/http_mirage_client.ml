@@ -116,7 +116,7 @@ struct
     Lwt.return {ctx; alpn_protocol; authenticator}
 end
 
-module Version = Httpaf.Version
+module Version = H1.Version
 module Status = H2.Status
 module Headers = H2.Headers
 
@@ -128,12 +128,19 @@ type response = {
 }
 
 module HTTP_1_1 = struct
-  include Httpaf.Client_connection
+  include H1.Client_connection
 
   let yield_reader _ = assert false
 
   let next_read_operation t =
-    (next_read_operation t :> [ `Close | `Read | `Yield ])
+    (next_read_operation t :> [ `Close | `Read | `Yield | `Upgrade ])
+
+  let next_write_operation t =
+    (next_write_operation t
+      :> [ `Close of int
+         | `Write of Bigstringaf.t H2.IOVec.t list
+         | `Yield
+         | `Upgrade ])
 end
 
 let add_authentication ~add headers = function
@@ -145,8 +152,8 @@ let add_authentication ~add headers = function
 let user_agent = "http-mirage-client/%%VERSION_NUM%%"
 
 let prepare_http_1_1_headers headers host user_pass body_length =
-  let headers = Httpaf.Headers.of_list headers in
-  let add = Httpaf.Headers.add_unless_exists in
+  let headers = H1.Headers.of_list headers in
+  let add = H1.Headers.add_unless_exists in
   let headers = add headers "user-agent" user_agent in
   let headers = add headers "host" host in
   let headers = add headers "connection" "close" in
@@ -160,7 +167,7 @@ let single_http_1_1_request
     ?config flow user_pass host meth path headers body f f_init =
   let body_length = Option.map String.length body in
   let headers = prepare_http_1_1_headers headers host user_pass body_length in
-  let req = Httpaf.Request.create ~headers meth path in
+  let req = H1.Request.create ~headers meth path in
   let finished, notify_finished = Lwt.wait () in
   let wakeup =
     let w = ref false in
@@ -171,22 +178,22 @@ let single_http_1_1_request
   let response_handler response body =
     let response =
       {
-        version= response.Httpaf.Response.version
-      ; status= (response.Httpaf.Response.status :> H2.Status.t)
-      ; reason= response.Httpaf.Response.reason
+        version= response.H1.Response.version
+      ; status= (response.H1.Response.status :> H2.Status.t)
+      ; reason= response.H1.Response.reason
       ; headers=
           H2.Headers.of_list
-            (Httpaf.Headers.to_list response.Httpaf.Response.headers)
+            (H1.Headers.to_list response.H1.Response.headers)
       } in
     let rec on_read on_eof acc ba ~off ~len =
       let str = Bigstringaf.substring ~off ~len ba in
       (* XXX(dinosaure): the copy must be done **before** any [>>=].
-         The given [ba] is re-used by the [Httpaf] scheduler then. *)
+         The given [ba] is re-used by the [H1] scheduler then. *)
       let acc = acc >>= fun acc -> f response acc str in
-      Httpaf.Body.schedule_read body ~on_read:(on_read on_eof acc)
+      H1.Body.Reader.schedule_read body ~on_read:(on_read on_eof acc)
         ~on_eof:(on_eof response acc) in
     let f_init = Lwt.return f_init in
-    Httpaf.Body.schedule_read body ~on_read:(on_read on_eof f_init)
+    H1.Body.Reader.schedule_read body ~on_read:(on_read on_eof f_init)
       ~on_eof:(on_eof response f_init) in
   let error_handler e =
     let err =
@@ -197,11 +204,11 @@ let single_http_1_1_request
       | `Exn e -> Error (`Msg ("Exception here: " ^ Printexc.to_string e)) in
     wakeup err in
   let request_body, conn =
-    Httpaf.Client_connection.request ?config req ~error_handler
+    H1.Client_connection.request ?config req ~error_handler
       ~response_handler in
   Lwt.async (fun () -> Paf.run (module HTTP_1_1) conn flow)
-  ; Option.iter (Httpaf.Body.write_string request_body) body
-  ; Httpaf.Body.close_writer request_body
+  ; Option.iter (H1.Body.Writer.write_string request_body) body
+  ; H1.Body.Writer.close request_body
   ; finished
 
 let prepare_h2_headers headers host user_pass body_length =
@@ -240,6 +247,17 @@ let prepare_h2_headers headers host user_pass body_length =
     add hdr "content-length"
       (string_of_int (Option.value ~default:0 body_length)) in
   add_authentication ~add hdr user_pass
+
+module H2_Client_connection = struct
+  include H2.Client_connection
+
+  let next_write_operation t =
+    (next_write_operation t
+      :> [ `Close of int
+         | `Write of Bigstringaf.t H2.IOVec.t list
+         | `Yield
+         | `Upgrade ])
+end
 
 let single_h2_request
     ?config ~scheme flow user_pass host meth path headers body f f_init =
@@ -288,7 +306,7 @@ let single_h2_request
   in
   let request_body =
     H2.Client_connection.request conn req ~error_handler ~response_handler in
-  Lwt.async (fun () -> Paf.run (module H2.Client_connection) conn flow)
+  Lwt.async (fun () -> Paf.run (module H2_Client_connection) conn flow)
   ; Option.iter (H2.Body.Writer.write_string request_body) body
   ; H2.Body.Writer.close request_body
   ; finished >|= fun v ->

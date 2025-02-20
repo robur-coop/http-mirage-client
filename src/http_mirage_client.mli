@@ -10,7 +10,7 @@ module Make
     (TCP : Tcpip.Tcp.S)
     (Happy_eyeballs : Mimic_happy_eyeballs.S with type flow = TCP.flow) : S
 
-module Version = Httpaf.Version
+module Version = H1.Version
 module Status = H2.Status
 module Headers = H2.Headers
 
@@ -22,11 +22,11 @@ type response = {
 }
 
 val request :
-     ?config:[ `H2 of H2.Config.t | `HTTP_1_1 of Httpaf.Config.t ]
+     ?config:[ `H2 of H2.Config.t | `HTTP_1_1 of H1.Config.t ]
   -> ?tls_config:Tls.Config.client
   -> t
   -> ?authenticator:X509.Authenticator.t
-  -> ?meth:Httpaf.Method.t
+  -> ?meth:H1.Method.t
   -> ?headers:(string * string) list
   -> ?body:string
   -> ?max_redirect:int

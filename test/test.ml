@@ -40,7 +40,7 @@ let http_1_1_error_handler ?notify (ipaddr, port) ?request:_ error respond =
         port
     | `Internal_server_error ->
       Fmt.str "Internal server error (%a:%d)" Ipaddr.pp ipaddr port in
-  let open Httpaf in
+  let open H1 in
   Option.iter (fun push -> push (Some ((ipaddr, port), error))) notify
   ; let headers =
       Headers.of_list
@@ -50,8 +50,8 @@ let http_1_1_error_handler ?notify (ipaddr, port) ?request:_ error respond =
         ; "connection", "close"
         ] in
     let body = respond headers in
-    Body.write_string body contents
-    ; Body.close_writer body
+    Body.Writer.write_string body contents
+    ; Body.Writer.close body
 
 let alpn_error_handler :
     type reqd headers request response ro wo.
@@ -80,11 +80,11 @@ let alpn_error_handler :
       ] in
     match protocol with
     | Alpn.HTTP_1_1 _ ->
-      let open Httpaf in
-      let headers = Headers.of_list (("connection", "close") :: headers) in
+      let open H1 in
+      let headers = H1.Headers.of_list (("connection", "close") :: headers) in
       let body = respond headers in
-      Body.write_string body contents
-      ; Body.close_writer body
+      Body.Writer.write_string body contents
+      ; Body.Writer.close body
     | Alpn.H2 _ ->
       let open H2 in
       let headers = Headers.of_list headers in
@@ -140,7 +140,7 @@ let test01 =
   let open Lwt.Syntax in
   let stop = Lwt_switch.create () in
   let handler reqd =
-    let open Httpaf in
+    let open H1 in
     let contents = "Hello World!" in
     let headers =
       Headers.of_list
@@ -186,18 +186,18 @@ let test02 =
   let open Lwt.Syntax in
   let stop = Lwt_switch.create () in
   let handler reqd =
-    let open Httpaf in
+    let open H1 in
     let {Request.meth; _} = Reqd.request reqd in
     if meth <> `POST then invalid_arg "Invalid HTTP method"
     ; let headers = Headers.of_list ["content-type", "text/plain"] in
       let response = Response.create ~headers `OK in
       let src = Reqd.request_body reqd in
       let dst = Reqd.respond_with_streaming reqd response in
-      let rec on_eof () = Body.close_reader src ; Body.close_writer dst
+      let rec on_eof () = Body.Reader.close src ; Body.Writer.close dst
       and on_read buf ~off ~len =
-        Body.write_bigstring dst ~off ~len buf
-        ; Body.schedule_read src ~on_eof ~on_read in
-      Body.schedule_read src ~on_eof ~on_read in
+        Body.Writer.write_bigstring dst ~off ~len buf
+        ; Body.Reader.schedule_read src ~on_eof ~on_read in
+      Body.Reader.schedule_read src ~on_eof ~on_read in
   let* stack = stack () in
   let happy_eyeballs = Happy_eyeballs.create stack in
   let* ctx = Mimic_happy_eyeballs.connect happy_eyeballs in
