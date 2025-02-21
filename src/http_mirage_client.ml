@@ -182,8 +182,7 @@ let single_http_1_1_request
       ; status= (response.H1.Response.status :> H2.Status.t)
       ; reason= response.H1.Response.reason
       ; headers=
-          H2.Headers.of_list
-            (H1.Headers.to_list response.H1.Response.headers)
+          H2.Headers.of_list (H1.Headers.to_list response.H1.Response.headers)
       } in
     let rec on_read on_eof acc ba ~off ~len =
       let str = Bigstringaf.substring ~off ~len ba in
@@ -204,8 +203,8 @@ let single_http_1_1_request
       | `Exn e -> Error (`Msg ("Exception here: " ^ Printexc.to_string e)) in
     wakeup err in
   let request_body, conn =
-    H1.Client_connection.request ?config req ~error_handler
-      ~response_handler in
+    H1.Client_connection.request ?config req ~error_handler ~response_handler
+  in
   Lwt.async (fun () -> Paf.run (module HTTP_1_1) conn flow)
   ; Option.iter (H1.Body.Writer.write_string request_body) body
   ; H1.Body.Writer.close request_body
