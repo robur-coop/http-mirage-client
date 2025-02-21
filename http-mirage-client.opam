@@ -18,7 +18,7 @@ depends: [
   "mirage-crypto-rng" {with-test}
   "dns-client-mirage" {with-test & >= "10.0.0"}
   "happy-eyeballs-mirage" {with-test & >= "2.0.0"}
-  "h2" {>= "0.10.0"}
+  "h2" {>= "0.12.0"}
   "h1"
   "tls" {>= "1.0.0"}
   "x509" {>= "1.0.0"}
