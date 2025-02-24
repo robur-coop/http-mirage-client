@@ -10,17 +10,18 @@ bug-reports: "https://github.com/robur-coop/http-mirage-client/issues"
 depends: [
   "dune" {>= "2.3"}
   "ocaml" {>= "4.11.0"}
-  "paf" {>= "0.2.0"}
+  "paf" {>= "0.8.0"}
   "tcpip" {>= "7.0.0"}
   "lwt" {>= "5.5.0"}
   "mimic-happy-eyeballs" {>= "0.0.9"}
-  "httpaf"
   "alcotest-lwt" {with-test & >= "1.0.0"}
   "mirage-crypto-rng" {with-test}
   "dns-client-mirage" {with-test & >= "10.0.0"}
   "happy-eyeballs-mirage" {with-test & >= "2.0.0"}
-  "h2" {>= "0.10.0"}
+  "h2" {>= "0.12.0"}
+  "h1"
   "tls" {>= "1.0.0"}
+  "tls-mirage"
   "x509" {>= "1.0.0"}
   "ca-certs-nss" {>= "3.108-1"}
 ]
