@@ -23,11 +23,11 @@ let http_client = typ HTTP_client
 
 let http_client =
   let connect _ modname = function
-    | [ _pclock; _tcpv4v6; ctx ] ->
+    | [ _tcpv4v6; ctx ] ->
       Fmt.str {ocaml|%s.connect %s|ocaml} modname ctx
     | _ -> assert false in
   impl ~connect "Http_mirage_client.Make"
-    (pclock @-> tcpv4v6 @-> git_client @-> http_client)
+    (tcpv4v6 @-> git_client @-> http_client)
 ```
 
 Then, you can decide how to construct such device:
@@ -60,7 +60,7 @@ module Make (HTTP_client : Http_mirage_client.S) = struct
 end
 ```
 
-[mirage]: https://mirage.io/
+[mirage]: https://mirageos.org/
 [happy-eyeballs]: https://github.com/robur-coop/happy-eyeballs
 [ocaml-tls]: https://github.com/mirleft/ocaml-tls
 [paf]: https://github.com/dinosaure/paf-le-chien
