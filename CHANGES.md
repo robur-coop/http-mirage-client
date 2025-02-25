@@ -1,3 +1,8 @@
+# v0.0.10 2025-02-25 - Berlin (Germany)
+
+- Use h1 instead of httpaf (!4 @dinosaure)
+- Requires h2 >= 0.12.0 (!4 @dinosaure)
+
 # v0.0.9 2025-02-17 - Berlin (Germany)
 
 - Remove unnecessary functors (@hannesm)
