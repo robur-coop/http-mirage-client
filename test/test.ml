@@ -53,8 +53,7 @@ let http_1_1_error_handler ?notify (ipaddr, port) ?request:_ error respond =
     Body.Writer.write_string body contents
     ; Body.Writer.close body
 
-let alpn_error_handler :
-    type reqd headers request response ro wo.
+let alpn_error_handler : type reqd headers request response ro wo.
        ?notify:(((Ipaddr.t * int) * Alpn.server_error) option -> unit)
     -> Ipaddr.t * int
     -> (reqd, headers, request, response, ro, wo) Alpn.protocol

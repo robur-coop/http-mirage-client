@@ -295,8 +295,9 @@ let single_h2_request
       | `Invalid_response_body_length _ ->
         Error (`Msg "Invalid response body length")
       | `Protocol_error (err, msg) ->
-        Format.kasprintf (fun e -> Error (`Msg e)) "%a: %s" H2.Error_code.pp_hum
-          err msg
+        Format.kasprintf
+          (fun e -> Error (`Msg e))
+          "%a: %s" H2.Error_code.pp_hum err msg
       | `Exn e -> Error (`Msg ("Exception here: " ^ Printexc.to_string e)) in
     wakeup err in
   let conn =
@@ -326,25 +327,25 @@ let decode_uri ~ctx uri =
       | [user; pass] -> Ok (user, pass)
       | _ -> Error (`Msg "Couldn't decode user and password") in
     (match String.split_on_char '@' user_pass_host_port with
-    | [host_port] -> Ok (None, host_port)
-    | [user_pass; host_port] ->
-      decode_user_pass user_pass >>= fun up -> Ok (Some up, host_port)
-    | _ -> Error (`Msg "Couldn't decode URI"))
+      | [host_port] -> Ok (None, host_port)
+      | [user_pass; host_port] ->
+        decode_user_pass user_pass >>= fun up -> Ok (Some up, host_port)
+      | _ -> Error (`Msg "Couldn't decode URI"))
     >>= fun (user_pass, host_port) ->
     (match String.split_on_char ':' host_port with
-    | [] -> Error (`Msg "Empty host & port")
-    | [hostname] -> Ok (hostname, Mimic.add http_hostname hostname ctx)
-    | hd :: tl -> (
-      let port, hostname =
-        match List.rev (hd :: tl) with
-        | hd :: tl -> hd, String.concat ":" (List.rev tl)
-        | _ -> assert false in
-      try
-        Ok
-          ( hostname
-          , Mimic.add http_hostname hostname
-              (Mimic.add http_port (int_of_string port) ctx) )
-      with Failure _ -> Error (`Msg "Couldn't decode port")))
+      | [] -> Error (`Msg "Empty host & port")
+      | [hostname] -> Ok (hostname, Mimic.add http_hostname hostname ctx)
+      | hd :: tl -> (
+        let port, hostname =
+          match List.rev (hd :: tl) with
+          | hd :: tl -> hd, String.concat ":" (List.rev tl)
+          | _ -> assert false in
+        try
+          Ok
+            ( hostname
+            , Mimic.add http_hostname hostname
+                (Mimic.add http_port (int_of_string port) ctx) )
+        with Failure _ -> Error (`Msg "Couldn't decode port")))
     >>= fun (hostname, ctx) ->
     Ok (ctx, scheme, hostname, user_pass, "/" ^ String.concat "/" path)
   | _ -> Error (`Msg "Couldn't decode URI on top")
@@ -370,22 +371,24 @@ let single_request
     | Error _ -> ctx in
   Mimic.resolve ctx >>? fun flow ->
   (match Option.bind (alpn_protocol flow) alpn_protocol_of_string, config with
-  | (Some `HTTP_1_1 | None), Some (`HTTP_1_1 config) ->
-    single_http_1_1_request ~config flow user_pass host meth path headers body f
-      f_init
-  | (Some `HTTP_1_1 | None), None ->
-    single_http_1_1_request flow user_pass host meth path headers body f f_init
-  | (Some `H2 | None), Some (`H2 config) ->
-    single_h2_request ~config ~scheme flow user_pass host meth path headers body
-      f f_init
-  | Some `H2, None ->
-    single_h2_request ~scheme flow user_pass host meth path headers body f
-      f_init
-  | Some `H2, Some (`HTTP_1_1 _) ->
-    single_h2_request ~scheme flow user_pass host meth path headers body f
-      f_init
-  | Some `HTTP_1_1, Some (`H2 _) ->
-    single_http_1_1_request flow user_pass host meth path headers body f f_init)
+    | (Some `HTTP_1_1 | None), Some (`HTTP_1_1 config) ->
+      single_http_1_1_request ~config flow user_pass host meth path headers body
+        f f_init
+    | (Some `HTTP_1_1 | None), None ->
+      single_http_1_1_request flow user_pass host meth path headers body f
+        f_init
+    | (Some `H2 | None), Some (`H2 config) ->
+      single_h2_request ~config ~scheme flow user_pass host meth path headers
+        body f f_init
+    | Some `H2, None ->
+      single_h2_request ~scheme flow user_pass host meth path headers body f
+        f_init
+    | Some `H2, Some (`HTTP_1_1 _) ->
+      single_h2_request ~scheme flow user_pass host meth path headers body f
+        f_init
+    | Some `HTTP_1_1, Some (`H2 _) ->
+      single_http_1_1_request flow user_pass host meth path headers body f
+        f_init)
   >>= fun r ->
   Mimic.close flow >>= fun () ->
   match r with
