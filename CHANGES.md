@@ -1,3 +1,7 @@
+# v0.0.11 2026-09-14 - Biesenthal (Germany)
+
+- Avoid Format.str_formatter
+
 # v0.0.10 2025-02-25 - Berlin (Germany)
 
 - Use h1 instead of httpaf (!4 @dinosaure)
