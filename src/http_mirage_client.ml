@@ -295,8 +295,7 @@ let single_h2_request
       | `Invalid_response_body_length _ ->
         Error (`Msg "Invalid response body length")
       | `Protocol_error (err, msg) ->
-        let kerr _ = Error (`Msg (Format.flush_str_formatter ())) in
-        Format.kfprintf kerr Format.str_formatter "%a: %s" H2.Error_code.pp_hum
+        Format.kasprintf (fun e -> Error (`Msg e)) "%a: %s" H2.Error_code.pp_hum
           err msg
       | `Exn e -> Error (`Msg ("Exception here: " ^ Printexc.to_string e)) in
     wakeup err in
